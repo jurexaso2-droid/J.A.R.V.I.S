@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rex - AI Assistant</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            background-color: #0b0f19;
+            color: #00f0ff;
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.5s ease;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px #00f0ff;
+        }
+
+        /* Initialization Overlay */
+        #init-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #0b0f19;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #init-btn {
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            font-family: 'Orbitron', sans-serif;
+            background: transparent;
+            color: #00f0ff;
+            border: 2px solid #00f0ff;
+            border-radius: 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        #init-btn:hover {
+            background: #00f0ff;
+            color: #0b0f19;
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.8);
+        }
+
+        /* Rex's Glowing Eye / UI */
+        .orb {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f0ff 10%, #004d66 70%, #0b0f19 100%);
+            box-shadow: 0 0 20px #00f0ff, inset 0 0 20px #000;
+            margin: 40px 0;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+        }
+
+        /* Glows extremely bright only when Rex is processing a command */
+        .orb.active {
+            animation: pulse 0.5s infinite alternate;
+            box-shadow: 0 0 80px #00f0ff, inset 0 0 40px #ffffff;
+            opacity: 1;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); }
+            100% { transform: scale(1.1); }
+        }
+
+        .display-box {
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+            min-height: 80px;
+        }
+
+        #log { margin-bottom: 10px; opacity: 0.5; font-size: 0.9rem; }
+        #transcript { margin-bottom: 10px; color: #fff; }
+        #response { font-weight: bold; font-size: 1.2rem; color: #00f0ff; }
+
+        .hint {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #55a0b5;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Start Screen to bypass browser autoplay blocks -->
+    <div id="init-screen">
+        <button id="init-btn" onclick="initializeSystem()">Initialize Rex</button>
+    </div>
+
+    <h1>System: Rex</h1>
+    
+    <div class="orb" id="rex-eye"></div>
+
+    <div class="display-box">
+        <div id="log">Mic Status: Waiting for initialization...</div>
+        <div id="transcript">Say "Rex" followed by your command.</div>
+        <div id="response"></div>
+    </div>
+
+    <div class="hint">
+        <b>Try saying into your earpods:</b><br>
+        "Rex, hello" | "Rex, what time is it?" <br>
+        "Rex, search for black holes" | "Rex, play interstellar soundtrack" <br>
+    </div>
+
+    <script>
+        const rexEye = document.getElementById('rex-eye');
+        const transcriptDiv = document.getElementById('transcript');
+        const responseDiv = document.getElementById('response');
+        const logDiv = document.getElementById('log');
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let systemActive = false;
+
+        // Ensure voices are loaded to memory
+        let voices =[];
+        window.speechSynthesis.onvoiceschanged = () => {
+            voices = window.speechSynthesis.getVoices();
+        };
+
+        function initializeSystem() {
+            if (!SpeechRecognition) {
+                alert("Your browser doesn't support Voice Recognition. Please use Chrome/Edge.");
+                return;
+            }
+
+            // Hide the init button
+            document.getElementById('init-screen').style.display = 'none';
+            systemActive = true;
+
+            setupRecognition();
+            speak("System initialized. I am online and listening. Say my name to wake me.");
+        }
+
+        function setupRecognition() {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true; // Keeps listening
+            recognition.interimResults = false; 
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                logDiv.innerText = "Mic Status: Active & Listening in background...";
+            };
+
+            recognition.onresult = (event) => {
+                const current = event.resultIndex;
+                const fullTranscript = event.results[current][0].transcript.toLowerCase().trim();
+                
+                transcriptDiv.innerText = `Heard: "${fullTranscript}"`;
+
+                // WAKE WORD LOGIC
+                if (fullTranscript.includes('rex')) {
+                    rexEye.classList.add('active'); // Light up the orb
+
+                    // Extract the actual command by removing "rex"
+                    let command = fullTranscript.replace('rex', '').trim();
+                    
+                    // Remove punctuation if any (like "rex, play music" -> "play music")
+                    command = command.replace(/^[^a-zA-Z0-9]+/, '').trim();
+
+                    if (command === '') {
+                        speak("Yes sir?");
+                    } else {
+                        processCommand(command);
+                    }
+
+                    // Turn off the bright orb after a short delay
+                    setTimeout(() => { rexEye.classList.remove('active'); }, 2000);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Mic Error:", event.error);
+                if (event.error === 'not-allowed') {
+                    logDiv.innerText = "Mic Status: Permission denied!";
+                }
+            };
+
+            // CONTINUOUS LOOP: If mic goes to sleep, wake it back up instantly
+            recognition.onend = () => {
+                if (systemActive) {
+                    logDiv.innerText = "Mic Status: Restarting...";
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            };
+
+            // Start listening right away
+            recognition.start();
+        }
+
+        // Setup Speech Synthesis (Text-to-Speech)
+        function speak(text) {
+            window.speechSynthesis.cancel(); // Stop anything currently speaking
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Find a good MALE voice (David on Windows, UK Male on Chrome, etc.)
+            const maleVoice = voices.find(v => 
+                v.name.includes('Microsoft David') || 
+                v.name.includes('Google UK English Male') || 
+                v.name.includes('Mark') || 
+                v.name.includes('Alex') ||
+                v.name.toLowerCase().includes('male')
+            );
+            
+            if (maleVoice) utterance.voice = maleVoice;
+
+            utterance.pitch = 0.6; // Lower pitch to sound deeper/more male
+            utterance.rate = 1.0;  // Normal speed
+
+            responseDiv.innerText = `Rex: "${text}"`;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Logic to process recognized voice commands
+        function processCommand(cmd) {
+            
+            // 1. GREETINGS
+            if (cmd.includes('hello') || cmd.includes('hi')) {
+                speak("Hello sir. Systems are fully functional.");
+            } 
+            
+            // 2. CUSTOM CODE COMMAND (Time)
+            else if (cmd.includes('time')) {
+                const time = new Date().toLocaleTimeString();
+                speak(`The current time is ${time}`);
+            } 
+            
+            // 3. UI CHANGE COMMANDS
+            else if (cmd.includes('light mode') || cmd.includes('background to white')) {
+                document.body.style.backgroundColor = "#ffffff";
+                document.body.style.color = "#000000";
+                speak("Interface set to light mode.");
+            }
+            else if (cmd.includes('dark mode') || cmd.includes('background to dark')) {
+                document.body.style.backgroundColor = "#0b0f19";
+                document.body.style.color = "#00f0ff";
+                speak("Interface restored to dark mode.");
+            }
+
+            // 4. PLAY MUSIC
+            else if (cmd.includes('play')) {
+                let song = cmd.replace('play', '').trim();
+                speak(`Playing ${song} on YouTube.`);
+                window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`, '_blank');
+            } 
+
+            // 5. ONLINE RESEARCH
+            else if (cmd.includes('search') || cmd.includes('research')) {
+                let query = cmd.replace('search', '').replace('research', '').replace('for', '').trim();
+                speak(`Gathering intelligence on ${query}.`);
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            } 
+            
+            // UNRECOGNIZED COMMAND
+            else {
+                speak("I heard you, but that command is not in my database.");
+            }
+        }
+    </script>
+</body>
+</html>
