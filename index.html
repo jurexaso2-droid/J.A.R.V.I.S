@@ -125,7 +125,7 @@
 
     <div class="hint">
         <b>Try saying into your earpods:</b><br>
-        "Rex, hello" | "Rex, what time is it?" <br>
+        "Rex, Greet" | "Rex, How much" | "Rex, what time is it?" <br>
         "Rex, search for black holes" | "Rex, play interstellar soundtrack" <br>
     </div>
 
@@ -156,7 +156,7 @@
             systemActive = true;
 
             setupRecognition();
-            speak("System initialized. I am online and listening. Say my name to wake me.");
+            speak("System initialized. I am Rex Bot and My Great Developer is Jurex When you use me Just. Say my name Rex to wake me.");
         }
 
         function setupRecognition() {
@@ -186,7 +186,7 @@
                     command = command.replace(/^[^a-zA-Z0-9]+/, '').trim();
 
                     if (command === '') {
-                        speak("Yes sir?");
+                        speak("Yes sir? Greatings to sir from here on Midsalip");
                     } else {
                         processCommand(command);
                     }
@@ -235,7 +235,7 @@
             
             if (maleVoice) utterance.voice = maleVoice;
 
-            utterance.pitch = 0.6; // Lower pitch to sound deeper/more male
+            utterance.pitch = 0.5; // Lower pitch to sound deeper/more male
             utterance.rate = 1.0;  // Normal speed
 
             responseDiv.innerText = `Rex: "${text}"`;
@@ -246,14 +246,18 @@
         function processCommand(cmd) {
             
             // 1. GREETINGS
-            if (cmd.includes('hello') || cmd.includes('hi')) {
-                speak("Hello sir. Systems are fully functional.");
+            if (cmd.includes('Greet') || cmd.includes('Great')) {
+                speak("Hello Ma'am or sir welcome on our Tricycle I hope you enjoy your rides on us on this tricycle");
+            } 
+                // 1. plete
+            if (cmd.includes('How') || cmd.includes('Much')) {
+                speak("Hello Ma'am or sir the payment is Just only 15 pesos because we are in the town i hope you enjoy our rides true Midsalip area");
             } 
             
             // 2. CUSTOM CODE COMMAND (Time)
             else if (cmd.includes('time')) {
                 const time = new Date().toLocaleTimeString();
-                speak(`The current time is ${time}`);
+                speak(`The current time sir is ${time}`);
             } 
             
             // 3. UI CHANGE COMMANDS
@@ -284,7 +288,7 @@
             
             // UNRECOGNIZED COMMAND
             else {
-                speak("I heard you, but that command is not in my database.");
+                speak("I heard you, but that command is not in my database. Because sir rex did add more command");
             }
         }
     </script>
